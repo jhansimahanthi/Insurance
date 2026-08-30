@@ -1,0 +1,28 @@
+package com.insurance.policy.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class PolicyResponse {
+    private Long id;
+    private String policyNumber;
+    private String policyName;
+    private String policyType;
+    private String description;
+    private BigDecimal coverageAmount;
+    private BigDecimal basePremium;
+    private Integer duration;
+    private String status;
+    private String benefits;
+    private String exclusions;
+    private LocalDateTime createdAt;
+}
