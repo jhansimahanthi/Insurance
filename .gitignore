@@ -1,0 +1,32 @@
+# Backend
+backend/**/target/
+backend/**/.mvn/
+*.class
+*.jar
+*.war
+
+# Frontend
+insurance-ui/node_modules/
+insurance-ui/dist/
+insurance-ui/.angular/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment
+.env
+*.env.local
+
+# Logs
+*.log
+logs/
