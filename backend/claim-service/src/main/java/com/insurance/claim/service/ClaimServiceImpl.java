@@ -15,6 +15,7 @@ import com.insurance.claim.mapper.ClaimMapper;
 import com.insurance.claim.repository.ClaimRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,14 +35,14 @@ public class ClaimServiceImpl implements ClaimService {
 
     private final ClaimRepository claimRepository;
     private final ClaimMapper claimMapper;
-    private final ClaimEventPublisher eventPublisher;
+
+    @Autowired(required = false)
+    private ClaimEventPublisher eventPublisher;
 
     public ClaimServiceImpl(ClaimRepository claimRepository,
-                            ClaimMapper claimMapper,
-                            ClaimEventPublisher eventPublisher) {
+                            ClaimMapper claimMapper) {
         this.claimRepository = claimRepository;
         this.claimMapper = claimMapper;
-        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -64,12 +65,18 @@ public class ClaimServiceImpl implements ClaimService {
 
         claim = claimRepository.save(claim);
 
-        ClaimSubmittedEvent event = ClaimSubmittedEvent.create(
-                claim.getId(), claim.getClaimNumber(),
-                claim.getCustomerId(), null,
-                claim.getPolicyId(), claim.getClaimType(),
-                claim.getClaimAmount(), claim.getIncidentDate());
-        eventPublisher.publishClaimSubmittedEvent(event);
+        if (eventPublisher != null) {
+            try {
+                ClaimSubmittedEvent event = ClaimSubmittedEvent.create(
+                        claim.getId(), claim.getClaimNumber(),
+                        claim.getCustomerId(), null,
+                        claim.getPolicyId(), claim.getClaimType(),
+                        claim.getClaimAmount(), claim.getIncidentDate());
+                eventPublisher.publishClaimSubmittedEvent(event);
+            } catch (Exception e) {
+                log.warn("Could not publish Kafka event: {}", e.getMessage());
+            }
+        }
 
         log.info("Claim submitted: {}", claimNumber);
         return claimMapper.toResponse(claim);
@@ -137,7 +144,6 @@ public class ClaimServiceImpl implements ClaimService {
         String previousStatus = claim.getStatus().name();
         String newStatus = request.getStatus().toUpperCase();
 
-        // Validate status transition
         validateStatusTransition(claim.getStatus(), Claim.ClaimStatus.valueOf(newStatus));
 
         claim.setStatus(Claim.ClaimStatus.valueOf(newStatus));
@@ -147,11 +153,17 @@ public class ClaimServiceImpl implements ClaimService {
 
         claim = claimRepository.save(claim);
 
-        ClaimStatusUpdatedEvent event = ClaimStatusUpdatedEvent.create(
-                claim.getId(), claim.getClaimNumber(),
-                claim.getCustomerId(), null,
-                previousStatus, newStatus, "admin");
-        eventPublisher.publishClaimStatusUpdatedEvent(event);
+        if (eventPublisher != null) {
+            try {
+                ClaimStatusUpdatedEvent event = ClaimStatusUpdatedEvent.create(
+                        claim.getId(), claim.getClaimNumber(),
+                        claim.getCustomerId(), null,
+                        previousStatus, newStatus, "admin");
+                eventPublisher.publishClaimStatusUpdatedEvent(event);
+            } catch (Exception e) {
+                log.warn("Could not publish Kafka event: {}", e.getMessage());
+            }
+        }
 
         log.info("Claim status updated: {} -> {}", previousStatus, newStatus);
         return claimMapper.toResponse(claim);

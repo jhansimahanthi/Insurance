@@ -1,0 +1,34 @@
+-- Seed data for policy service (H2 compatible)
+-- Insurance policies
+
+INSERT INTO insurance_policies (policy_number, policy_name, policy_type, description, coverage_amount, base_premium, duration, status, benefits, exclusions, created_at)
+SELECT 'POL-000001', 'Comprehensive Auto Insurance', 'AUTO', 'Full coverage auto insurance protecting your vehicle against accidents, theft, and natural disasters.', 50000.00, 120.00, 12, 'ACTIVE', 'Accident coverage, Theft protection, Natural disaster damage, Third-party liability, Roadside assistance', 'Pre-existing damage, Racing activities, Intentional damage', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM insurance_policies WHERE policy_number = 'POL-000001');
+
+INSERT INTO insurance_policies (policy_number, policy_name, policy_type, description, coverage_amount, base_premium, duration, status, benefits, exclusions, created_at)
+SELECT 'POL-000002', 'Home Protect Plus', 'HOME', 'Comprehensive home insurance covering structure, contents, and liability.', 250000.00, 89.00, 12, 'ACTIVE', 'Building coverage, Contents protection, Personal liability, Temporary accommodation, Natural disaster coverage', 'Flood damage in certain zones, War and terrorism, Nuclear hazards', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM insurance_policies WHERE policy_number = 'POL-000002');
+
+INSERT INTO insurance_policies (policy_number, policy_name, policy_type, description, coverage_amount, base_premium, duration, status, benefits, exclusions, created_at)
+SELECT 'POL-000003', 'Health Shield Premium', 'HEALTH', 'Premium health insurance with extensive coverage for hospitalization and medical expenses.', 500000.00, 250.00, 12, 'ACTIVE', 'Hospitalization, Surgery coverage, Pre and post hospitalization, Ambulance charges, Day care procedures', 'Cosmetic surgery, Self-inflicted injuries, Pre-existing conditions (first year)', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM insurance_policies WHERE policy_number = 'POL-000003');
+
+INSERT INTO insurance_policies (policy_number, policy_name, policy_type, description, coverage_amount, base_premium, duration, status, benefits, exclusions, created_at)
+SELECT 'POL-000004', 'LifeGuard Term Insurance', 'LIFE', 'Term life insurance providing financial security to your family.', 1000000.00, 150.00, 120, 'ACTIVE', 'Death benefit, Terminal illness benefit, Waiver of premium, Accidental death benefit', 'Suicide within first year, War and military service, Adventure sports (if not disclosed)', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM insurance_policies WHERE policy_number = 'POL-000004');
+
+INSERT INTO insurance_policies (policy_number, policy_name, policy_type, description, coverage_amount, base_premium, duration, status, benefits, exclusions, created_at)
+SELECT 'POL-000005', 'TravelSafe International', 'TRAVEL', 'International travel insurance covering medical emergencies and trip cancellations.', 100000.00, 45.00, 1, 'ACTIVE', 'Medical emergencies, Trip cancellation, Baggage loss, Flight delay coverage, Emergency evacuation', 'Pre-existing medical conditions, High-risk activities, Travel to restricted areas', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM insurance_policies WHERE policy_number = 'POL-000005');
+
+INSERT INTO insurance_policies (policy_number, policy_name, policy_type, description, coverage_amount, base_premium, duration, status, benefits, exclusions, created_at)
+SELECT 'POL-000006', 'Basic Auto Shield', 'AUTO', 'Essential auto insurance with third-party liability and own damage coverage.', 25000.00, 65.00, 12, 'ACTIVE', 'Third-party liability, Own damage, Personal accident cover, Roadside assistance', 'Racing activities, Driving under influence, Pre-existing damage', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM insurance_policies WHERE policy_number = 'POL-000006');
+
+INSERT INTO insurance_policies (policy_number, policy_name, policy_type, description, coverage_amount, base_premium, duration, status, benefits, exclusions, created_at)
+SELECT 'POL-000007', 'Family Health Plan', 'HEALTH', 'Family floater health insurance covering the entire family under one plan.', 750000.00, 400.00, 12, 'ACTIVE', 'Family coverage, Maternity benefits, Newborn coverage, AYUSH treatments, Preventive health checkup', 'Cosmetic treatments, Experimental treatments, Self-inflicted injuries', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM insurance_policies WHERE policy_number = 'POL-000007');
+
+INSERT INTO insurance_policies (policy_number, policy_name, policy_type, description, coverage_amount, base_premium, duration, status, benefits, exclusions, created_at)
+SELECT 'POL-000008', 'Senior Citizen Health', 'HEALTH', 'Specialized health insurance designed for senior citizens with comprehensive coverage.', 300000.00, 350.00, 12, 'ACTIVE', 'Hospitalization, Pre-existing disease coverage (after waiting period), Ambulance, Day care treatments, AYUSH', 'Cosmetic surgery, Experimental treatments, Self-inflicted injuries', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (SELECT 1 FROM insurance_policies WHERE policy_number = 'POL-000008');

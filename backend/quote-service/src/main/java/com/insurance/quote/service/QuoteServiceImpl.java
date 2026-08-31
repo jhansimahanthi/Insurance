@@ -13,6 +13,7 @@ import com.insurance.quote.mapper.QuoteMapper;
 import com.insurance.quote.repository.QuoteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,18 +36,18 @@ public class QuoteServiceImpl implements QuoteService {
     private final PolicyServiceClient policyServiceClient;
     private final PremiumCalculator premiumCalculator;
     private final QuoteMapper quoteMapper;
-    private final QuoteEventPublisher eventPublisher;
+
+    @Autowired(required = false)
+    private QuoteEventPublisher eventPublisher;
 
     public QuoteServiceImpl(QuoteRepository quoteRepository,
                             PolicyServiceClient policyServiceClient,
                             PremiumCalculator premiumCalculator,
-                            QuoteMapper quoteMapper,
-                            QuoteEventPublisher eventPublisher) {
+                            QuoteMapper quoteMapper) {
         this.quoteRepository = quoteRepository;
         this.policyServiceClient = policyServiceClient;
         this.premiumCalculator = premiumCalculator;
         this.quoteMapper = quoteMapper;
-        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -85,12 +86,18 @@ public class QuoteServiceImpl implements QuoteService {
         quote = quoteRepository.save(quote);
         log.info("Quote generated: {}, premium: {}", quoteNumber, calculatedPremium);
 
-        QuoteGeneratedEvent event = QuoteGeneratedEvent.create(
-                quote.getId(), quote.getQuoteNumber(),
-                quote.getCustomerId(), null,
-                quote.getPolicyId(), policyName,
-                quote.getCalculatedPremium(), quote.getCoverageAmount());
-        eventPublisher.publishQuoteGeneratedEvent(event);
+        if (eventPublisher != null) {
+            try {
+                QuoteGeneratedEvent event = QuoteGeneratedEvent.create(
+                        quote.getId(), quote.getQuoteNumber(),
+                        quote.getCustomerId(), null,
+                        quote.getPolicyId(), policyName,
+                        quote.getCalculatedPremium(), quote.getCoverageAmount());
+                eventPublisher.publishQuoteGeneratedEvent(event);
+            } catch (Exception e) {
+                log.warn("Could not publish Kafka event: {}", e.getMessage());
+            }
+        }
 
         return quoteMapper.toResponse(quote, policyName);
     }

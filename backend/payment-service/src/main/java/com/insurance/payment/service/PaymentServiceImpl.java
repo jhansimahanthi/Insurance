@@ -12,6 +12,7 @@ import com.insurance.payment.mapper.PaymentMapper;
 import com.insurance.payment.repository.PaymentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,14 +31,14 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
-    private final PaymentEventPublisher eventPublisher;
+
+    @Autowired(required = false)
+    private PaymentEventPublisher eventPublisher;
 
     public PaymentServiceImpl(PaymentRepository paymentRepository,
-                              PaymentMapper paymentMapper,
-                              PaymentEventPublisher eventPublisher) {
+                              PaymentMapper paymentMapper) {
         this.paymentRepository = paymentRepository;
         this.paymentMapper = paymentMapper;
-        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -47,7 +48,6 @@ public class PaymentServiceImpl implements PaymentService {
 
         String paymentReference = generatePaymentReference();
 
-        // Simulated payment processing - in production this would connect to a payment gateway
         Payment payment = Payment.builder()
                 .paymentReference(paymentReference)
                 .customerId(request.getCustomerId())
@@ -63,13 +63,18 @@ public class PaymentServiceImpl implements PaymentService {
         payment = paymentRepository.save(payment);
         log.info("Payment processed successfully: {}", paymentReference);
 
-        // Publish payment completed event
-        PaymentCompletedEvent event = PaymentCompletedEvent.create(
-                payment.getId(), payment.getPaymentReference(),
-                payment.getCustomerId(), null,
-                payment.getPolicyId(), payment.getPurchaseId(),
-                payment.getAmount(), payment.getPaymentMethod().name());
-        eventPublisher.publishPaymentCompletedEvent(event);
+        if (eventPublisher != null) {
+            try {
+                PaymentCompletedEvent event = PaymentCompletedEvent.create(
+                        payment.getId(), payment.getPaymentReference(),
+                        payment.getCustomerId(), null,
+                        payment.getPolicyId(), payment.getPurchaseId(),
+                        payment.getAmount(), payment.getPaymentMethod().name());
+                eventPublisher.publishPaymentCompletedEvent(event);
+            } catch (Exception e) {
+                log.warn("Could not publish Kafka event: {}", e.getMessage());
+            }
+        }
 
         return paymentMapper.toResponse(payment);
     }

@@ -13,17 +13,19 @@ import com.insurance.user.repository.UserRepository;
 import com.insurance.user.security.JwtTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -34,20 +36,20 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserMapper userMapper;
-    private final UserEventPublisher eventPublisher;
     private final AuthenticationManager authenticationManager;
+
+    @Autowired(required = false)
+    private UserEventPublisher eventPublisher;
 
     public UserServiceImpl(UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
                            JwtTokenProvider jwtTokenProvider,
                            UserMapper userMapper,
-                           UserEventPublisher eventPublisher,
                            AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.userMapper = userMapper;
-        this.eventPublisher = eventPublisher;
         this.authenticationManager = authenticationManager;
     }
 
@@ -77,10 +79,16 @@ public class UserServiceImpl implements UserService {
         user = userRepository.save(user);
         log.info("User registered successfully: {}", user.getEmail());
 
-        CustomerRegisteredEvent event = CustomerRegisteredEvent.create(
-                user.getId(), user.getFirstName(), user.getLastName(),
-                user.getEmail(), user.getPhone());
-        eventPublisher.publishCustomerRegisteredEvent(event);
+        if (eventPublisher != null) {
+            try {
+                CustomerRegisteredEvent event = CustomerRegisteredEvent.create(
+                        user.getId(), user.getFirstName(), user.getLastName(),
+                        user.getEmail(), user.getPhone());
+                eventPublisher.publishCustomerRegisteredEvent(event);
+            } catch (Exception e) {
+                log.warn("Could not publish Kafka event: {}", e.getMessage());
+            }
+        }
 
         String token = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
 

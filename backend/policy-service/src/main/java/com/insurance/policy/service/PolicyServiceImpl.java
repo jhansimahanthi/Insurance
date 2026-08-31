@@ -15,6 +15,7 @@ import com.insurance.policy.repository.PolicyRepository;
 import com.insurance.policy.repository.PurchaseRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,16 +36,16 @@ public class PolicyServiceImpl implements PolicyService {
     private final PolicyRepository policyRepository;
     private final PurchaseRepository purchaseRepository;
     private final PolicyMapper policyMapper;
-    private final PolicyEventPublisher eventPublisher;
+
+    @Autowired(required = false)
+    private PolicyEventPublisher eventPublisher;
 
     public PolicyServiceImpl(PolicyRepository policyRepository,
                              PurchaseRepository purchaseRepository,
-                             PolicyMapper policyMapper,
-                             PolicyEventPublisher eventPublisher) {
+                             PolicyMapper policyMapper) {
         this.policyRepository = policyRepository;
         this.purchaseRepository = purchaseRepository;
         this.policyMapper = policyMapper;
-        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -189,13 +190,19 @@ public class PolicyServiceImpl implements PolicyService {
 
         purchase = purchaseRepository.save(purchase);
 
-        PolicyPurchasedEvent event = PolicyPurchasedEvent.create(
-                purchase.getId(), purchase.getPurchaseNumber(),
-                purchase.getCustomerId(), null,
-                policy.getId(), policy.getPolicyName(),
-                purchase.getQuoteId(), purchase.getPremium(),
-                purchase.getStartDate(), purchase.getEndDate());
-        eventPublisher.publishPolicyPurchasedEvent(event);
+        if (eventPublisher != null) {
+            try {
+                PolicyPurchasedEvent event = PolicyPurchasedEvent.create(
+                        purchase.getId(), purchase.getPurchaseNumber(),
+                        purchase.getCustomerId(), null,
+                        policy.getId(), policy.getPolicyName(),
+                        purchase.getQuoteId(), purchase.getPremium(),
+                        purchase.getStartDate(), purchase.getEndDate());
+                eventPublisher.publishPolicyPurchasedEvent(event);
+            } catch (Exception e) {
+                log.warn("Could not publish Kafka event: {}", e.getMessage());
+            }
+        }
 
         log.info("Policy purchase recorded: {}", purchaseNumber);
         return policyMapper.toPurchaseResponse(purchase, policy.getPolicyName());

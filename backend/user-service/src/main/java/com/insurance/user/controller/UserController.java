@@ -1,7 +1,6 @@
 package com.insurance.user.controller;
 
 import com.insurance.common.dto.ApiResponse;
-import com.insurance.common.dto.PaginatedResponse;
 import com.insurance.user.dto.UpdateUserRequest;
 import com.insurance.user.dto.UserResponse;
 import com.insurance.user.service.UserService;
@@ -46,40 +45,21 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User retrieved successfully", response));
     }
 
-    @PutMapping("/admin/customers/{id}")
-    @Operation(summary = "Update customer details (admin)")
-    public ResponseEntity<ApiResponse<UserResponse>> updateCustomer(
+    @PutMapping("/users/{id}")
+    @Operation(summary = "Update user details (admin)")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable Long id,
             @Valid @RequestBody UpdateUserRequest request) {
         UserResponse response = userService.updateCustomer(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Customer updated successfully", response));
+        return ResponseEntity.ok(ApiResponse.success("User updated successfully", response));
     }
 
-    @PutMapping("/admin/customers/{id}/status")
-    @Operation(summary = "Update customer status (admin)")
-    public ResponseEntity<ApiResponse<UserResponse>> updateCustomerStatus(
+    @PutMapping("/users/{id}/status")
+    @Operation(summary = "Update user status (admin)")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
             @PathVariable Long id,
             @RequestParam String status) {
         UserResponse response = userService.updateUserStatus(id, status);
-        return ResponseEntity.ok(ApiResponse.success("Customer status updated successfully", response));
-    }
-
-    @GetMapping("/admin/customers")
-    @Operation(summary = "Get all customers (admin)")
-    public ResponseEntity<ApiResponse<PaginatedResponse<UserResponse>>> getAllCustomers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String search) {
-        PaginatedResponse<UserResponse> response = userService.getAllCustomers(page, size, search);
-        return ResponseEntity.ok(ApiResponse.success("Customers retrieved successfully", response));
-    }
-
-    @GetMapping("/admin/users")
-    @Operation(summary = "Get all users (admin)")
-    public ResponseEntity<ApiResponse<PaginatedResponse<UserResponse>>> getAllUsers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        PaginatedResponse<UserResponse> response = userService.getAllUsers(page, size);
-        return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", response));
+        return ResponseEntity.ok(ApiResponse.success("User status updated successfully", response));
     }
 }

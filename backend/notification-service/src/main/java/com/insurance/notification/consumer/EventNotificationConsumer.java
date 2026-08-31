@@ -4,10 +4,13 @@ import com.insurance.common.event.*;
 import com.insurance.notification.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnBean(ConcurrentKafkaListenerContainerFactory.class)
 public class EventNotificationConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(EventNotificationConsumer.class);
