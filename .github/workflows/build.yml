@@ -1,0 +1,37 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Backend
+        run: cd backend && mvn clean compile -q
+
+      - name: Run Backend Tests
+        run: cd backend && mvn test -q
+
+      - name: Build Angular Frontend
+        run: |
+          cd insurance-ui
+          npm ci
+          npx ng build --configuration production
+
+      - name: Verify Docker Build
+        run: docker compose build --quiet

@@ -41,46 +41,76 @@ Insurance companies need digital platforms to manage policies, process payments,
 
 ## 🏗️ Architecture
 
+### High-Level Architecture
+
+```mermaid
+graph TB
+    subgraph Frontend["Angular Frontend"]
+        A[Customer Portal]
+        B[Admin Dashboard]
+    end
+
+    subgraph Gateway["API Gateway :8080"]
+        C[Spring Cloud Gateway]
+        D[JWT Filter]
+    end
+
+    subgraph Services["Microservices"]
+        E[User Service :8081]
+        F[Policy Service :8082]
+        G[Quote Service :8083]
+        H[Payment Service :8084]
+        I[Claim Service :8085]
+        J[Notification Service :8086]
+    end
+
+    subgraph Kafka["Apache Kafka"]
+        K[customer-events]
+        L[quote-events]
+        M[policy-events]
+        N[payment-events]
+        O[claim-events]
+    end
+
+    subgraph DB["PostgreSQL Databases"]
+        P[user_db]
+        Q[policy_db]
+        R[quote_db]
+        S[payment_db]
+        T[claim_db]
+        U[notification_db]
+    end
+
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    D --> F
+    D --> G
+    D --> H
+    D --> I
+    D --> J
+
+    F --> M
+    H --> N
+    I --> O
+    E --> K
+    G --> L
+
+    E --> P
+    F --> Q
+    G --> R
+    H --> S
+    I --> T
+    J --> U
 ```
-┌─────────────┐
-│   Angular   │
-│   Frontend  │
-│  (Port 4200)│
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│ API Gateway │
-│ (Port 8080) │
-└──────┬──────┘
-       │
-┌──────▼──────────────────────────────────────────┐
-│          Microservice Layer                       │
-│                                                   │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐         │
-│  │  User    │ │  Policy  │ │  Quote   │         │
-│  │ Service  │ │ Service  │ │ Service  │         │
-│  │ :8081    │ │ :8082    │ │ :8083    │         │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘         │
-│       │            │            │                 │
-│  ┌────▼────┐ ┌─────▼────┐ ┌────▼─────┐         │
-│  │ Payment │ │  Claim   │ │Notif.    │         │
-│  │ Service │ │ Service  │ │Service   │         │
-│  │ :8084   │ │ :8085    │ │:8086     │         │
-│  └────┬────┘ └────┬─────┘ └────┬─────┘         │
-└───────┼───────────┼────────────┼─────────────────┘
-        │           │            │
-┌───────▼───────────▼────────────▼─────────────────┐
-│              Apache Kafka                         │
-│  customer-events | quote-events | policy-events  │
-│  payment-events | claim-events                   │
-└──────────────────────────────────────────────────┘
-        │           │            │
-┌───────▼───────────▼────────────▼─────────────────┐
-│              PostgreSQL Databases                  │
-│  user_db | policy_db | quote_db | payment_db      │
-│  claim_db | notification_db                       │
-└──────────────────────────────────────────────────┘
-```
+
+### Communication Patterns
+
+| Pattern | Used For | Why |
+|---------|----------|-----|
+| **REST (Synchronous)** | Policy lookup, quote generation, user auth | Immediate response required |
+| **Kafka (Asynchronous)** | Policy purchase, payment events, claims, notifications | Decoupled, reliable, scalable |
 
 ---
 
@@ -100,39 +130,106 @@ Insurance companies need digital platforms to manage policies, process payments,
 
 ---
 
-## 🎭 Kafka Event Architecture
+## 📡 Kafka Architecture
 
-| Event | Producer | Consumer | Topic |
-|-------|----------|----------|-------|
-| `CustomerRegisteredEvent` | User Service | Notification Service | `customer-events` |
-| `QuoteGeneratedEvent` | Quote Service | Notification Service | `quote-events` |
-| `PolicyPurchasedEvent` | Policy Service | Payment, Notification | `policy-events` |
-| `PaymentCompletedEvent` | Payment Service | Policy, Notification | `payment-events` |
-| `ClaimSubmittedEvent` | Claim Service | Notification Service | `claim-events` |
-| `ClaimStatusUpdatedEvent` | Claim Service | Notification Service | `claim-events` |
+### Event Topics
+
+| Topic | Producer | Consumer(s) | Purpose |
+|-------|----------|-------------|----------|
+| customer-events | User Service | Notification | New customer registered |
+| quote-events | Quote Service | Notification | Quote generated |
+| policy-events | Policy Service | Payment, Notification | Policy purchased |
+| payment-events | Payment Service | Policy, Notification | Payment success/failure |
+| claim-events | Claim Service | Notification | Claim submitted/updated |
+
+### Policy Purchase Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Customer
+    participant GW as API Gateway
+    participant PS as Policy Service
+    participant QS as Quote Service
+    participant PMS as Payment Service
+    participant NS as Notification Service
+    participant K as Kafka
+
+    C->>GW: Generate Quote
+    GW->>QS: POST /api/quotes
+    QS->>QS: Calculate premium
+    QS-->>C: Quote returned
+
+    C->>GW: Purchase Policy
+    GW->>PS: POST /api/policies/purchase
+    PS->>PS: Create purchase record
+    PS->>K: PolicyPurchasedEvent
+    K->>PMS: Consume event → Process payment
+    K->>NS: Consume event → Send notification
+
+    PMS->>PMS: Simulate payment
+    alt Payment Success
+        PMS->>K: PaymentCompletedEvent
+        K->>PS: Update purchase → ACTIVE
+        K->>NS: Send success notification
+    else Payment Failed
+        PMS->>K: PaymentFailedEvent
+        K->>PS: Update purchase → FAILED
+        K->>NS: Send failure notification
+    end
+```
+
+### Claim Processing Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Customer
+    participant GW as API Gateway
+    participant CS as Claim Service
+    participant NS as Notification Service
+    participant K as Kafka
+    participant A as Admin
+
+    C->>GW: Submit Claim
+    GW->>CS: POST /api/claims
+    CS->>CS: Create claim (PENDING)
+    CS->>K: ClaimSubmittedEvent
+    K->>NS: Send notification
+
+    A->>GW: Review Claim
+    GW->>CS: PUT /api/claims/{id}/status
+    CS->>CS: Update status → APPROVED/REJECTED
+    CS->>K: ClaimStatusUpdatedEvent
+    K->>NS: Send status notification
+    NS-->>C: Claim status notification
+```
 
 ---
 
 ## 🗄️ Database Design
 
-### User Service
-- **users**: id, firstName, lastName, email, password, phone, role, status, createdAt, updatedAt
+```mermaid
+erDiagram
+    USER ||--o{ POLICY_PURCHASE : buys
+    USER ||--o{ QUOTE : generates
+    USER ||--o{ CLAIM : submits
+    USER ||--o{ NOTIFICATION : receives
+    POLICY ||--o{ POLICY_PURCHASE : includes
+    POLICY ||--o{ QUOTE : referenced_in
+    POLICY ||--o{ CLAIM : covers
+    POLICY_PURCHASE ||--o| PAYMENT : has
+    POLICY_PURCHASE ||--o{ CLAIM : may_have
+```
 
-### Policy Service
-- **insurance_policies**: id, policyNumber, policyName, policyType, description, coverageAmount, basePremium, duration, status
-- **policy_purchases**: id, purchaseNumber, customerId, policyId, quoteId, premium, startDate, endDate, status
+### Database Schemas
 
-### Quote Service
-- **quotes**: id, quoteNumber, customerId, policyId, age, coverageAmount, duration, riskLevel, calculatedPremium, status
-
-### Payment Service
-- **payments**: id, paymentReference, customerId, policyId, amount, paymentMethod, status, transactionDate
-
-### Claim Service
-- **claims**: id, claimNumber, customerId, policyId, claimType, description, claimAmount, incidentDate, status
-
-### Notification Service
-- **notifications**: id, userId, title, message, type, read, eventType, eventId
+| Database | Tables |
+|----------|--------|
+| user_db | users |
+| policy_db | insurance_policies, policy_purchases |
+| quote_db | quotes |
+| payment_db | payments |
+| claim_db | claims |
+| notification_db | notifications |
 
 ---
 
@@ -325,6 +422,31 @@ Swagger UI is available at each service:
 - Payment Service: `http://localhost:8084/swagger-ui.html`
 - Claim Service: `http://localhost:8085/swagger-ui.html`
 - Notification Service: `http://localhost:8086/swagger-ui.html`
+
+---
+
+## 💡 Interview Topics
+
+This project demonstrates understanding of:
+
+### Architecture
+- **Why microservices?** Independent deployment, team autonomy, technology flexibility
+- **Why Kafka?** Async communication for policy purchases, payments, and claims
+- **Why REST + Kafka?** REST for sync operations (quotes, queries), Kafka for async events
+
+### Key Workflows
+- **Policy purchase:** Browse → Quote → Purchase → Payment → Activate
+- **Claim process:** Submit → Review → Approve/Reject → Notify customer
+- **Payment failure:** Payment fails → Kafka event → Update purchase status → Notify
+
+### Technical Concepts
+- JWT authentication with role-based access (Customer/Admin)
+- Database-per-service pattern with eventual consistency
+- Premium calculation with multi-factor formula
+- Event-driven architecture with Kafka consumer groups
+- API Gateway routing and cross-cutting concerns
+
+See [docs/INTERVIEW_GUIDE.md](docs/INTERVIEW_GUIDE.md) for detailed Q&A.
 
 ---
 
