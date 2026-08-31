@@ -4,125 +4,150 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { PolicyService } from '../../core/services/policy.service';
 import { ClaimService } from '../../core/services/claim.service';
+import { SidebarLayoutComponent, SidebarItem } from '../../shared/components/sidebar-layout/sidebar-layout.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, SidebarLayoutComponent],
   template: `
-    <div class="dashboard-layout">
-      <aside class="sidebar">
-        <div class="sidebar-brand">🛡️ InsurePro</div>
-        <nav class="sidebar-nav">
-          <a routerLink="/customer/dashboard" class="nav-item active">📊 Dashboard</a>
-          <a routerLink="/customer/policies" class="nav-item">📋 Policies</a>
-          <a routerLink="/customer/purchases" class="nav-item">🛒 My Policies</a>
-          <a routerLink="/customer/quotes" class="nav-item">💰 Quotes</a>
-          <a routerLink="/customer/claims" class="nav-item">📝 Claims</a>
-          <a routerLink="/customer/notifications" class="nav-item">🔔 Notifications</a>
-        </nav>
-      </aside>
-      <main class="main-content">
-        <div class="page-header">
-          <div>
-            <h1>Welcome, {{ authService.currentUser()?.firstName }}!</h1>
-            <p class="text-muted">Here's an overview of your insurance portfolio</p>
-          </div>
+    <app-sidebar-layout [items]="sidebarItems">
+      <div class="page-header">
+        <div>
+          <h1>Welcome back, {{ authService.currentUser()?.firstName }}! 👋</h1>
+          <p class="text-muted">Here's an overview of your insurance portfolio</p>
         </div>
-        <div class="grid grid-4">
-          <div class="stat-card">
-            <div class="stat-value">{{ activePolicies }}</div>
-            <div class="stat-label">Active Policies</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">{{ pendingClaims }}</div>
-            <div class="stat-label">Pending Claims</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">\${{ totalCoverage | number }}</div>
-            <div class="stat-label">Total Coverage</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">\${{ totalPremium | number }}</div>
-            <div class="stat-label">Annual Premium</div>
-          </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-4">
+        <div class="stat-card">
+          <div class="stat-icon blue">📋</div>
+          <div class="stat-value">{{ activePolicies }}</div>
+          <div class="stat-label">Active Policies</div>
         </div>
-        <div class="grid grid-2" style="margin-top: 24px;">
-          <div class="card">
+        <div class="stat-card">
+          <div class="stat-icon amber">📝</div>
+          <div class="stat-value">{{ pendingClaims }}</div>
+          <div class="stat-label">Pending Claims</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">🛡️</div>
+          <div class="stat-value">\${{ totalCoverage | number }}</div>
+          <div class="stat-label">Total Coverage</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">💳</div>
+          <div class="stat-value">\${{ totalPremium | number }}</div>
+          <div class="stat-label">Annual Premium</div>
+        </div>
+      </div>
+
+      <!-- Recent Data -->
+      <div class="grid grid-2" style="margin-top: 28px;">
+        <div class="card">
+          <div class="card-header">
             <h3>Recent Policies</h3>
-            <div *ngIf="policies.length === 0" class="empty-state">
-              <p>No policies yet. <a routerLink="/customer/policies">Browse policies</a> to get started.</p>
-            </div>
-            <div class="policy-list">
-              <div class="policy-item" *ngFor="let p of policies">
+            <a routerLink="/customer/purchases" class="view-all">View All →</a>
+          </div>
+          <div *ngIf="policies.length === 0" class="empty-state">
+            <div class="empty-icon">📋</div>
+            <p>No policies yet</p>
+            <a routerLink="/customer/policies" class="btn-primary btn-sm" style="margin-top: 12px;">Browse Policies</a>
+          </div>
+          <div class="data-list">
+            <div class="data-item" *ngFor="let p of policies">
+              <div class="data-info">
+                <span class="data-icon">📋</span>
                 <div>
-                  <strong>{{ p.policyName }}</strong>
-                  <span class="text-muted"> • {{ p.policyType }}</span>
+                  <div class="data-title">{{ p.policyName }}</div>
+                  <div class="data-sub">{{ p.policyType }} • \${{ p.premium }}/mo</div>
                 </div>
-                <span class="badge badge-success">{{ p.status }}</span>
               </div>
+              <span class="badge badge-success">{{ p.status }}</span>
             </div>
           </div>
-          <div class="card">
+        </div>
+
+        <div class="card">
+          <div class="card-header">
             <h3>Recent Claims</h3>
-            <div *ngIf="claims.length === 0" class="empty-state">
-              <p>No claims submitted yet.</p>
-            </div>
-            <div class="policy-list">
-              <div class="policy-item" *ngFor="let c of claims">
+            <a routerLink="/customer/claims" class="view-all">View All →</a>
+          </div>
+          <div *ngIf="claims.length === 0" class="empty-state">
+            <div class="empty-icon">📝</div>
+            <p>No claims submitted yet</p>
+          </div>
+          <div class="data-list">
+            <div class="data-item" *ngFor="let c of claims">
+              <div class="data-info">
+                <span class="data-icon">📝</span>
                 <div>
-                  <strong>{{ c.claimNumber }}</strong>
-                  <span class="text-muted"> • {{ c.claimType }}</span>
+                  <div class="data-title">{{ c.claimNumber }}</div>
+                  <div class="data-sub">{{ c.claimType }} • \${{ c.claimAmount | number }}</div>
                 </div>
-                <span class="badge" [ngClass]="getStatusClass(c.status)">{{ c.status }}</span>
               </div>
+              <span class="badge" [ngClass]="getStatusClass(c.status)">{{ c.status }}</span>
             </div>
           </div>
         </div>
-        <div class="card" style="margin-top: 24px;">
-          <h3>Quick Actions</h3>
-          <div class="quick-actions">
-            <a routerLink="/customer/policies" class="action-card">
-              <span class="action-icon">📋</span>
-              <span>Browse Policies</span>
-            </a>
-            <a routerLink="/customer/claims" class="action-card">
-              <span class="action-icon">📝</span>
-              <span>Submit Claim</span>
-            </a>
-            <a routerLink="/customer/purchases" class="action-card">
-              <span class="action-icon">💳</span>
-              <span>View Payments</span>
-            </a>
-            <a routerLink="/customer/notifications" class="action-card">
-              <span class="action-icon">🔔</span>
-              <span>Notifications</span>
-            </a>
-          </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card" style="margin-top: 28px;">
+        <h3 style="margin-bottom: 16px;">Quick Actions</h3>
+        <div class="quick-actions">
+          <a routerLink="/customer/policies" class="action-card">
+            <span class="action-icon">🔍</span>
+            <span class="action-label">Browse Policies</span>
+            <span class="action-desc">Explore insurance options</span>
+          </a>
+          <a routerLink="/customer/claims" class="action-card">
+            <span class="action-icon">📝</span>
+            <span class="action-label">Submit Claim</span>
+            <span class="action-desc">File a new claim</span>
+          </a>
+          <a routerLink="/customer/purchases" class="action-card">
+            <span class="action-icon">💳</span>
+            <span class="action-label">My Policies</span>
+            <span class="action-desc">View purchased policies</span>
+          </a>
+          <a routerLink="/customer/notifications" class="action-card">
+            <span class="action-icon">🔔</span>
+            <span class="action-label">Notifications</span>
+            <span class="action-desc">View your alerts</span>
+          </a>
         </div>
-      </main>
-    </div>
+      </div>
+    </app-sidebar-layout>
   `,
   styles: [`
-    .dashboard-layout { display: flex; min-height: calc(100vh - 64px); }
-    .sidebar { width: 240px; background: white; border-right: 1px solid var(--border); padding: 24px 0; position: sticky; top: 64px; height: calc(100vh - 64px); }
-    .sidebar-brand { padding: 0 24px 24px; font-size: 1.1rem; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); }
-    .sidebar-nav { padding: 12px; }
-    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: var(--radius); color: var(--text-secondary); font-size: 14px; margin-bottom: 4px; }
-    .nav-item:hover { background: var(--bg-primary); color: var(--text-primary); }
-    .nav-item.active { background: #dbeafe; color: var(--primary); font-weight: 500; }
-    .main-content { flex: 1; padding: 32px; }
-    .policy-list { margin-top: 16px; }
-    .policy-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
-    .policy-item:last-child { border-bottom: none; }
-    .empty-state { text-align: center; padding: 24px; color: var(--text-muted); }
-    .quick-actions { display: flex; gap: 16px; margin-top: 16px; }
-    .action-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px; background: var(--bg-primary); border-radius: var(--radius-lg); border: 1px solid var(--border); flex: 1; text-align: center; transition: all 0.2s; }
-    .action-card:hover { border-color: var(--primary); background: #eff6ff; }
-    .action-icon { font-size: 1.5rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .view-all { font-size: 13px; font-weight: 500; }
+    .data-list { display: flex; flex-direction: column; }
+    .data-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 0; border-bottom: 1px solid var(--border-light);
+    }
+    .data-item:last-child { border-bottom: none; }
+    .data-info { display: flex; align-items: center; gap: 12px; }
+    .data-icon { font-size: 1.25rem; width: 36px; height: 36px; border-radius: 8px; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; }
+    .data-title { font-weight: 500; font-size: 14px; }
+    .data-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .empty-state { text-align: center; padding: 32px 16px; color: var(--text-muted); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 8px; opacity: 0.5; }
+    .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .action-card {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 24px 16px; background: var(--bg-primary); border-radius: var(--radius-lg);
+      border: 1px solid var(--border); text-align: center; transition: all 0.2s;
+    }
+    .action-card:hover { border-color: var(--primary); background: var(--primary-50); transform: translateY(-2px); box-shadow: var(--shadow); }
+    .action-icon { font-size: 1.75rem; }
+    .action-label { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+    .action-desc { font-size: 12px; color: var(--text-muted); }
     @media (max-width: 768px) {
-      .sidebar { display: none; }
-      .quick-actions { flex-wrap: wrap; }
+      .quick-actions { grid-template-columns: repeat(2, 1fr); }
     }
   `]
 })
@@ -133,6 +158,15 @@ export class DashboardComponent implements OnInit {
   totalPremium = 0;
   policies: any[] = [];
   claims: any[] = [];
+
+  sidebarItems: SidebarItem[] = [
+    { icon: '📊', label: 'Dashboard', route: '/customer/dashboard' },
+    { icon: '📋', label: 'Policies', route: '/customer/policies' },
+    { icon: '🛒', label: 'My Policies', route: '/customer/purchases' },
+    { icon: '💰', label: 'Quotes', route: '/customer/quotes' },
+    { icon: '📝', label: 'Claims', route: '/customer/claims' },
+    { icon: '🔔', label: 'Notifications', route: '/customer/notifications' },
+  ];
 
   constructor(
     public authService: AuthService,
